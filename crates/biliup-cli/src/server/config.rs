@@ -317,6 +317,10 @@ pub struct StreamerConfig {
 #[derive(bon::Builder, PartialEq, Debug, Clone, Serialize, Deserialize, Default, Patch)]
 #[patch(attribute(derive(Debug, Default, Deserialize)))]
 pub struct UserConfig {
+    // kuaishou配置
+    /// 快手Cookie字符串
+    #[serde(default)]
+    pub kuaishou_cookie: Option<String>,
     // B站配置
     /// B站Cookie字符串
     #[serde(default)]
