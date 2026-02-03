@@ -1,7 +1,42 @@
+# --- Git ---
 .git
+.gitignore
 .github
+
+# --- Rust / Cargo ---
+# 必须忽略，否则 Docker 构建的第一步会卡死在 "Sending build context"
 target/
-frontend/node_modules/
-frontend/out/
-frontend/dist/
+Cargo.lock
+
+# --- Node.js / Frontend ---
+node_modules/
+package-lock.json
+.next/
+# 忽略前端构建产物，因为我们在 Docker 内部会重新生成
+out/
+dist/
+.env*.local
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+.venv/
+build/
+*.egg-info/
+
+# --- 运行时数据与日志 ---
 *.db
+*.log
+download/
+downloads/
+data/
+config.yaml
+
+# --- 操作系统与编辑器 ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
