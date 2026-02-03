@@ -1,11 +1,16 @@
-version: '3'
 services:
   biliup:
-    image: ghcr.io/biliup/caution:latest
-    container_name: biliup
+    # 1.使用本地构建
+    build:
+      context: .
+      # 这里指定本地专用文件
+      dockerfile: Dockerfile-cn
+    # 2. 或指定镜像文件
+    # image: ghcr.io/biliup/caution:latest
+    container_name: biliup-dev
     restart: unless-stopped
     ports:
-      - "<HOST_ADDRESS>:<HOST_PORT>:19159"
+      - '<HOST_ADDRESS>:<HOST_PORT>:19159'
     volumes:
-      - /path/to/save_folder:/opt
+      - ./biliup_data:/opt
     command: server --auth

@@ -1,0 +1,59 @@
+# 1. 构建前端 Web UI
+FROM node:lts-slim AS webui-builder
+WORKDIR /biliup
+# 使用清华 npm 镜像
+RUN npm config set registry https://mirrors.tuna.tsinghua.edu.cn/npm/
+COPY frontend/package*.json ./frontend/ 
+# 先安装依赖（利用缓存）
+WORKDIR /biliup/frontend
+RUN npm install
+# 拷贝前端代码并构建
+COPY frontend/ .
+RUN npm run build
+
+# 2. 构建 Rust 核心 (Python Wheel)
+FROM rust:latest AS wheel-builder
+WORKDIR /biliup
+
+# 配置 Rust 清华镜像源
+RUN mkdir -p $HOME/.cargo && \
+    echo '[source.crates-io]\n\
+replace-with = "tuna"\n\
+[source.tuna]\n\
+registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"' > $HOME/.cargo/config.toml
+
+# 安装 Python 和 maturin
+RUN apt-get update && apt-get install -y python3-pip python3-dev
+RUN pip3 install maturin --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 拷贝本地代码
+COPY . .
+# 拷贝前端构建产物 (根据你项目的实际输出目录，通常是 out 或 dist)
+COPY --from=webui-builder /biliup/frontend/out ./frontend/out
+
+# 构建 Wheel
+RUN maturin build --release
+
+# 3. 最终运行镜像
+FROM python:3.13-slim AS biliup
+WORKDIR /opt
+
+ENV TZ="Asia/Shanghai"
+
+# 替换 Debian 清华源
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources || \
+    sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    xz-utils \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# 从构建阶段拷贝编译好的 Wheel 并安装
+COPY --from=wheel-builder /biliup/target/wheels/*.whl /tmp/
+RUN pip3 install /tmp/*.whl -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip3 install quickjs -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    rm -rf /tmp/*
+
+ENTRYPOINT ["biliup"]
